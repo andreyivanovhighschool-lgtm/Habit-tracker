@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Habit Tracker</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f4f8;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 2rem 1rem;
+    }
+
+    .app {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 24px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #6b7280;
+      margin-bottom: 1.25rem;
+    }
+
+    .progress-label {
+      font-size: 13px;
+      color: #6b7280;
+      margin-bottom: 6px;
+    }
+
+    .progress-bar-wrap {
+      background: #e5e7eb;
+      border-radius: 999px;
+      height: 10px;
+      margin-bottom: 1.5rem;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 10px;
+      border-radius: 999px;
+      background: #1D9E75;
+      transition: width 0.4s ease;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.25rem;
+    }
+
+    .add-row input {
+      flex: 1;
+      font-size: 14px;
+      padding: 10px 14px;
+      border: 1.5px solid #d1d5db;
+      border-radius: 10px;
+      outline: none;
+      color: #1a1a2e;
+    }
+
+    .add-row input:focus {
+      border-color: #1D9E75;
+    }
+
+    .add-row button {
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      background: #1D9E75;
+      color: #ffffff;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .add-row button:hover {
+      background: #0F6E56;
+    }
+
+    .habit-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .habit-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 12px;
+      background: #ffffff;
+      transition: border-color 0.2s;
+    }
+
+    .habit-card.done {
+      border-color: #1D9E75;
+      background: #f0faf6;
+    }
+
+    .check-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 2px solid #d1d5db;
+      background: transparent;
+      cursor: pointer;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    .habit-card.done .check-btn {
+      background: #1D9E75;
+      border-color: #1D9E75;
+      color: #fff;
+    }
+
+    .habit-name {
+      flex: 1;
+      font-size: 15px;
+      color: #1a1a2e;
+    }
+
+    .habit-card.done .habit-name {
+      color: #9ca3af;
+      text-decoration: line-through;
+    }
+
+    .del-btn {
+      background: transparent;
+      border: none;
+      color: #d1d5db;
+      cursor: pointer;
+      font-size: 20px;
+      padding: 2px 4px;
+      border-radius: 6px;
+      line-height: 1;
+    }
+
+    .del-btn:hover {
+      color: #e24b4a;
+    }
+
+    .empty {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 2rem 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app">
+    <h1>Daily Habit Tracker</h1>
+    <p class="subtitle">Отбележи навиците си за днес</p>
+    <p class="progress-label" id="prog-label">0 / 0 изпълнени</p>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="prog-bar" style="width:0%"></div>
+    </div>
+    <div class="add-row">
+      <input id="habit-input" type="text" placeholder="Нов навик..." maxlength="60" />
+      <button onclick="addHabit()">+ Добави</button>
+    </div>
+    <div class="habit-list" id="habit-list">
+      <p class="empty" id="empty-msg">Нямаш навици — добави първия!</p>
+    </div>
+  </div>
+
+  <script>
+    // Масив за съхранение на навиците
+    var habits = [];
+    var nextId = 1;
+
+    // Функция за рендиране на списъка
+    function render() {
+      var list = document.getElementById('habit-list');
+      var emptyMsg = document.getElementById('empty-msg');
+
+      list.innerHTML = '';
+
+      // Ако няма навици, показваме съобщение
+      if (habits.length === 0) {
+        list.appendChild(emptyMsg);
+        emptyMsg.style.display = 'block';
+      } else {
+        emptyMsg.style.display = 'none';
+
+        // Цикъл за всеки навик
+        for (var i = 0; i < habits.length; i++) {
+          var h = habits[i];
+
+          var card = document.createElement('div');
+          card.className = 'habit-card' + (h.done ? ' done' : '');
+
+          var checkBtn = document.createElement('button');
+          checkBtn.className = 'check-btn';
+          checkBtn.textContent = h.done ? '✓' : '';
+          checkBtn.setAttribute('data-id', h.id);
+          checkBtn.onclick = (function(id) {
+            return function() { toggle(id); };
+          })(h.id);
+
+          var nameSpan = document.createElement('span');
+          nameSpan.className = 'habit-name';
+          nameSpan.textContent = h.name;
+
+          var delBtn = document.createElement('button');
+          delBtn.className = 'del-btn';
+          delBtn.textContent = '×';
+          delBtn.setAttribute('data-id', h.id);
+          delBtn.onclick = (function(id) {
+            return function() { deleteHabit(id); };
+          })(h.id);
+
+          card.appendChild(checkBtn);
+          card.appendChild(nameSpan);
+          card.appendChild(delBtn);
+          list.appendChild(card);
+        }
+      }
+
+      updateProgress();
+    }
+
+    // Обновяване на прогрес бара
+    function updateProgress() {
+      var done = 0;
+      for (var i = 0; i < habits.length; i++) {
+        if (habits[i].done) done++;
+      }
+      var total = habits.length;
+      var pct = total === 0 ? 0 : Math.round((done / total) * 100);
+
+      document.getElementById('prog-bar').style.width = pct + '%';
+      document.getElementById('prog-label').textContent =
+        done + ' / ' + total + ' изпълнени (' + pct + '%)';
+    }
+
+    // Добавяне на навик
+    function addHabit() {
+      var input = document.getElementById('habit-input');
+      var name = input.value.trim();
+
+      if (name === '') return; // Ако полето е празно, не правим нищо
+
+      habits.push({ id: nextId, name: name, done: false });
+      nextId++;
+      input.value = '';
+      render();
+    }
+
+    // Превключване на статус (изпълнен / неизпълнен)
+    function toggle(id) {
+      for (var i = 0; i < habits.length; i++) {
+        if (habits[i].id === id) {
+          if (habits[i].done === false) {
+            habits[i].done = true;
+          } else {
+            habits[i].done = false;
+          }
+          break;
+        }
+      }
+      render();
+    }
+
+    // Изтриване на навик
+    function deleteHabit(id) {
+      var newHabits = [];
+      for (var i = 0; i < habits.length; i++) {
+        if (habits[i].id !== id) {
+          newHabits.push(habits[i]);
+        }
+      }
+      habits = newHabits;
+      render();
+    }
+
+    // Enter клавиш за добавяне
+    document.getElementById('habit-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        addHabit();
+      }
+    });
+
+    // Стартираме с начален рендер
+    render();
+  </script>
+
+</body>
+</html>
